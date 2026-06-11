@@ -167,7 +167,9 @@ button:active{transform:scale(.97)}
 .r-odds .pl{display:block;font-size:10px;color:var(--dim);font-weight:500}
 /* signature: the money column */
 .move{display:flex;align-items:center;justify-content:flex-end;gap:6px}
-.move .pct{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;min-width:42px;text-align:right}
+.move .stack{display:flex;flex-direction:column;align-items:flex-end}
+.move .pct{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;text-align:right}
+.move .was{font-size:8.5px;color:var(--dim);white-space:nowrap;margin-top:1px}
 .move .pct.firm{color:var(--firm)}
 .move .pct.ease{color:var(--ease)}
 .move .pct.flat{color:var(--dim)}
@@ -237,7 +239,7 @@ footer a{color:var(--dim)}
 
   <footer>
     Sources: Ladbrokes/Neds affiliate feed (official, free) · TAB info-service (free public JSON).<br>
-    Firming % = opening fixed price vs current. Green = money coming for it · Red = drifting. Deeper colour = bigger move.<br>
+    ▲ green = firming: money coming for it, so the fixed price falls (the −% is the price drop from open). ▼ red = easing: drifting, price rises (+%). Deeper colour = bigger move.<br>
     Gamble responsibly — <a href="https://www.gamblinghelponline.org.au">gamblinghelponline.org.au</a> · 1800 858 858
   </footer>
 </div>
@@ -389,7 +391,7 @@ const SOURCES = {
         code: m.category || "T", key: m.meeting,
         races: (m.races || [])
           .filter(r => r.race_number > 0)
-          .map(r => ({ key: r.id, number: r.race_number, name: r.name, start: r.start_time, status: "" }))
+          .map(r => ({ key: r.id, number: r.race_number, name: r.name, start: r.start_time, status: r.status || "" }))
       })).filter(m => m.races.length);
     },
     async race(mtg, raceRef){
@@ -631,12 +633,14 @@ function renderHome(app){
   }
   meetings.forEach(m => {
     const open = state.openMeetings.has(m.key);
+    const allDead = m.races.length > 0 && m.races.every(r =>
+      statusInfo((state.raceCache[m.key + "|" + r.key] || {}).status || r.status).kind === "dead");
     html += `
-    <div class="meeting ${open ? "open":""}" data-mtg="${esc(m.key)}">
+    <div class="meeting ${open ? "open":""}" style="${allDead ? "opacity:.55" : ""}" data-mtg="${esc(m.key)}">
       <div class="meeting-head">
         <span class="mtg-type">${esc(m.code)}</span>
         <div>
-          <div class="mtg-name">${esc(m.name)}</div>
+          <div class="mtg-name">${esc(m.name)}${allDead ? ' <span class="stat dead" style="vertical-align:2px">ABND</span>' : ""}</div>
           <div class="mtg-loc">${esc(m.location)} · ${codeLabel(m.code)}</div>
         </div>
         <span class="mtg-count">${m.races.length} races</span>
@@ -814,9 +818,12 @@ $("#codeFilter").addEventListener("change", render);
 
 /* ---------- boot ---------- */
 $("#dateStamp").textContent = new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
-demoBuild();
+state.mode = "live";
+$("#modePill").dataset.mode = "live";
+$("#modePill").textContent = "Live";
+$("#modeBtn").textContent = "Use demo";
 render();
-setStatus("Demo mode — tap Refresh to simulate movement, or Go live for real prices");
+refresh();
 </script>
 </body>
 </html>
