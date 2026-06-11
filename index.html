@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0c120e">
+<title>RaceDay — Odds &amp; Movers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c120e;            /* tote-board green-black */
+  --panel:#141d17;
+  --panel-2:#1a2620;
+  --line:rgba(255,255,255,.07);
+  --text:#e9ede9;
+  --dim:#8da396;
+  --amber:#ffc44d;         /* tote-bulb odds */
+  --firm:#2ecc71;
+  --ease:#ff5d5d;
+  --accent:#39b06f;
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{
+  font-family:'Inter',-apple-system,system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;
+  padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 12px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:20;
+  background:linear-gradient(var(--bg) 82%,rgba(12,18,14,0));
+  padding:10px 0 14px;
+}
+.masthead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+h1{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;
+  letter-spacing:.04em;text-transform:uppercase;line-height:1;
+}
+h1 .dot{color:var(--amber)}
+.datestamp{font-size:12px;color:var(--dim);font-weight:500}
+.controls{display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap}
+select,button{
+  font:inherit;font-size:13px;font-weight:600;color:var(--text);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  padding:8px 10px;appearance:none;-webkit-appearance:none;
+}
+button{cursor:pointer}
+button:active{transform:scale(.97)}
+#refreshBtn{background:var(--accent);border-color:transparent;color:#06130b;flex:1;min-width:88px}
+#refreshBtn:disabled{opacity:.55}
+#autoBtn[data-on="true"]{border-color:var(--accent);color:var(--accent)}
+.modebar{
+  display:flex;align-items:center;gap:8px;margin-top:8px;
+  font-size:11px;color:var(--dim);
+}
+.modepill{
+  border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;
+}
+.modepill[data-mode="live"]{color:var(--firm);border-color:rgba(46,204,113,.4)}
+.modepill[data-mode="demo"]{color:var(--amber);border-color:rgba(255,196,77,.4)}
+#status{flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- movers strip ---------- */
+.section-label{
+  font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  margin:18px 0 8px;display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.movers{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.movers::-webkit-scrollbar{display:none}
+.mover-card{
+  min-width:150px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:10px 12px;flex-shrink:0;cursor:pointer;
+}
+.mover-card .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.mover-card .where{font-size:10.5px;color:var(--dim);margin-top:2px}
+.mover-card .row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.mover-card .odds{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:var(--amber)}
+
+/* ---------- meetings ---------- */
+.meeting{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  margin-bottom:10px;overflow:hidden;
+}
+.meeting-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.mtg-type{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;
+  width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--amber);flex-shrink:0;
+}
+.mtg-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:.02em}
+.mtg-loc{font-size:11px;color:var(--dim)}
+.mtg-count{margin-left:auto;font-size:11px;color:var(--dim);white-space:nowrap}
+.chev{color:var(--dim);transition:transform .2s;flex-shrink:0}
+.meeting.open .chev{transform:rotate(90deg)}
+.races{display:none;border-top:1px solid var(--line)}
+.meeting.open .races{display:block}
+.race-row{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;
+  border-bottom:1px solid var(--line);font-size:13.5px;
+}
+.race-row:last-child{border-bottom:none}
+.race-row:active{background:var(--panel-2)}
+.race-no{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--amber);font-size:12.5px;width:30px;flex-shrink:0}
+.race-nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.race-time{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);flex-shrink:0}
+.race-time.soon{color:var(--firm)}
+.race-status{font-size:10px;color:var(--ease);text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- race view ---------- */
+.back{
+  display:inline-flex;align-items:center;gap:6px;margin:4px 0 12px;
+  background:none;border:none;color:var(--accent);font-weight:600;font-size:14px;padding:6px 0;
+}
+.race-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;line-height:1.1}
+.race-sub{font-size:12px;color:var(--dim);margin-top:4px}
+.colhead{
+  display:grid;grid-template-columns:30px 1fr 56px 84px;gap:8px;align-items:center;
+  padding:14px 12px 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+}
+.runner{
+  display:grid;grid-template-columns:30px 1fr 56px 84px;gap:8px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:7px;
+}
+.runner.scr{opacity:.38}
+.saddle{
+  font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:7px;
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+}
+.r-name{font-size:14.5px;font-weight:600;line-height:1.25}
+.r-meta{font-size:10.5px;color:var(--dim);margin-top:2px}
+.badge{
+  display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:1px;
+}
+.badge.fav{background:rgba(255,196,77,.15);color:var(--amber);border:1px solid rgba(255,196,77,.35)}
+.badge.mov{background:rgba(46,204,113,.15);color:var(--firm);border:1px solid rgba(46,204,113,.35)}
+.r-odds{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;color:var(--amber);text-align:right}
+.r-odds .pl{display:block;font-size:10px;color:var(--dim);font-weight:500}
+/* signature: the money column */
+.move{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.move .pct{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;min-width:42px;text-align:right}
+.move .pct.firm{color:var(--firm)}
+.move .pct.ease{color:var(--ease)}
+.move .pct.flat{color:var(--dim)}
+.heat{
+  width:26px;height:26px;border-radius:7px;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  transition:background .4s,box-shadow .4s;
+}
+.heat .arr{font-weight:700;font-style:normal;line-height:1}
+.heat.firm .arr{color:#04150b}
+.heat.ease .arr{color:#1c0606}
+.heat.flat .arr{color:var(--dim)}
+
+.empty{padding:28px 12px;text-align:center;color:var(--dim);font-size:13.5px;line-height:1.6}
+.spinner{
+  width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--amber);
+  border-radius:50%;margin:30px auto;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+footer{margin-top:26px;font-size:10.5px;color:var(--dim);line-height:1.6;text-align:center}
+footer a{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="masthead">
+      <h1>Race<span class="dot">·</span>Day</h1>
+      <div class="datestamp" id="dateStamp"></div>
+    </div>
+    <div class="controls">
+      <select id="source" title="Odds source">
+        <option value="AUTO" selected>Auto source</option>
+        <option value="LB">Ladbrokes</option>
+        <option value="NEDS">Neds</option>
+        <option value="TAB">TAB</option>
+      </select>
+      <select id="jur" title="State">
+        <option value="ALL" selected>All states</option>
+        <option value="NSW">NSW</option>
+        <option value="VIC">VIC</option>
+        <option value="QLD">QLD</option>
+        <option value="SA">SA</option>
+        <option value="WA">WA</option>
+        <option value="TAS">TAS</option>
+        <option value="ACT">ACT</option>
+        <option value="NT">NT</option>
+      </select>
+      <select id="codeFilter" title="Race code">
+        <option value="T" selected>Horses</option>
+        <option value="H">Harness</option>
+        <option value="G">Greys</option>
+        <option value="ALL">All</option>
+      </select>
+      <button id="refreshBtn">Refresh</button>
+      <button id="autoBtn" data-on="false" title="Auto-refresh every 60s">Auto</button>
+    </div>
+    <div class="modebar">
+      <span class="modepill" id="modePill" data-mode="demo">Demo</span>
+      <button id="modeBtn" style="font-size:11px;padding:4px 10px">Go live</button>
+      <span id="status"></span>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer>
+    Sources: Ladbrokes/Neds affiliate feed (official, free) · TAB info-service (free public JSON).<br>
+    Firming % = opening fixed price vs current. Green = money coming for it · Red = drifting. Deeper colour = bigger move.<br>
+    Gamble responsibly — <a href="https://www.gamblinghelponline.org.au">gamblinghelponline.org.au</a> · 1800 858 858
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   RaceDay v2 — multi-bookmaker racing odds + market movers
+   Sources (all free, no API key):
+     LB   : https://api-affiliates.ladbrokes.com.au/affiliates/v1   (official affiliate feed)
+     NEDS : https://api-affiliates.neds.com.au/affiliates/v1        (same Entain platform)
+     TAB  : https://api.beta.tab.com.au/v1/tab-info-service         (public info feed)
+   AUTO mode tries LB -> NEDS -> TAB and remembers what worked.
+   CORS  : direct fetch first, then public proxy fallbacks.
+   Firming: opening price (from flucs history) vs current price,
+            plus session tracking across refreshes.
+   ============================================================ */
+
+const PROXIES = [
+  u => u,
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+  u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u),
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u)
+];
+
+const state = {
+  mode: "demo",
+  view: { name: "home" },
+  meetings: [],
+  raceCache: {},     // raceKey -> normalised race
+  book: {},          // runnerKey -> {open, prev, cur}
+  openMeetings: new Set(),
+  autoTimer: null,
+  workingProxy: 0,
+  activeSource: null // which source AUTO settled on
+};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const todayISO = () => {
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+};
+const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"}); };
+const minsAway = iso => { const d = new Date(iso); return isNaN(d) ? null : Math.round((d - Date.now())/60000); };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const codeLabel = c => ({T:"Horses",R:"Horses",H:"Harness",G:"Greys"}[c] || c);
+const num = v => { const n = parseFloat(v); return isFinite(n) && n > 1 ? n : null; };
+
+/* ---------- movement maths ---------- */
+function recordPrice(key, open, cur){
+  if(cur == null) return;
+  const b = state.book[key] || (state.book[key] = { open: open ?? cur, prev: cur, cur });
+  if(open && (!b.open || b.open === b.cur)) b.open = open;
+  if(!b.open) b.open = cur;
+  b.prev = b.cur;
+  b.cur = cur;
+}
+function movement(key){
+  const b = state.book[key];
+  if(!b || !b.open || !b.cur) return { pct: 0, dir: 0 };
+  const pct = ((b.open - b.cur) / b.open) * 100;   // + = firming
+  return { pct, dir: pct > 0.05 ? 1 : pct < -0.05 ? -1 : 0 };
+}
+function heatStyle(pct){
+  const mag = Math.min(Math.abs(pct) / 30, 1);
+  if(pct > 0.05){
+    const a = 0.18 + mag * 0.82;
+    return `background:rgba(46,204,113,${a.toFixed(2)});border-color:rgba(46,204,113,${(0.3+mag*0.7).toFixed(2)});`
+         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(46,204,113,.45);` : "");
+  }
+  if(pct < -0.05){
+    const a = 0.18 + mag * 0.82;
+    return `background:rgba(255,93,93,${a.toFixed(2)});border-color:rgba(255,93,93,${(0.3+mag*0.7).toFixed(2)});`
+         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(255,93,93,.4);` : "");
+  }
+  return "";
+}
+function moveCell(key){
+  const m = movement(key);
+  const cls = m.dir > 0 ? "firm" : m.dir < 0 ? "ease" : "flat";
+  const arrow = m.dir > 0 ? "▲" : m.dir < 0 ? "▼" : "–";
+  const pctTxt = m.dir === 0 ? "0.0%" : (m.pct > 0 ? "−" : "+") + Math.abs(m.pct).toFixed(1) + "%";
+  return `<div class="move">
+            <span class="pct ${cls}">${pctTxt}</span>
+            <span class="heat ${cls}" style="${heatStyle(m.pct)}"><i class="arr">${arrow}</i></span>
+          </div>`;
+}
+
+/* ---------- fetch with proxy fallback + per-route timeout ---------- */
+const ROUTE_TIMEOUT_MS = 8000;   // give each route 8s, then move on
+async function fetchWithTimeout(url, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try{
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+async function corsFetch(url){
+  const order = [...PROXIES.keys()].sort((a,b)=>(a===state.workingProxy?-1:b===state.workingProxy?1:0));
+  let lastErr;
+  for(const i of order){
+    try{
+      const res = await fetchWithTimeout(PROXIES[i](url), ROUTE_TIMEOUT_MS);
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+      const trimmed = text.trim();
+      if(!trimmed || trimmed[0] === "<") throw new Error("route returned a web page, not data");
+      const data = JSON.parse(trimmed);
+      state.workingProxy = i;
+      return data;
+    }catch(e){
+      lastErr = e.name === "AbortError" ? new Error("timed out") : e;
+    }
+  }
+  throw lastErr || new Error("all routes failed");
+}
+
+/* ============================================================
+   SOURCE ADAPTERS — each normalises to:
+   meeting: { name, location, code(T/H/G), key, races:[{key, number, name, start, status}] }
+   race:    { name, start, distance, runners:[{number, name, barrier, rider,
+              trainer, win, place, open, scratched, fav, mover}] }
+   ============================================================ */
+const SOURCES = {
+
+  /* ----- Ladbrokes / Neds official affiliate feed ----- */
+  LB: {
+    label: "Ladbrokes",
+    base: "https://api-affiliates.ladbrokes.com.au/affiliates/v1",
+    async meetings(){
+      const d = await corsFetch(this.base + `/racing/meetings?date_from=${todayISO()}&date_to=${todayISO()}&country=AUS&limit=200`);
+      const list = d?.data?.meetings || [];
+      return list.map(m => ({
+        name: m.name, location: m.state || m.country || "",
+        code: m.category || "T", key: m.meeting,
+        races: (m.races || [])
+          .filter(r => r.race_number > 0)
+          .map(r => ({ key: r.id, number: r.race_number, name: r.name, start: r.start_time, status: "" }))
+      })).filter(m => m.races.length);
+    },
+    async race(mtg, raceRef){
+      const d = await corsFetch(this.base + "/racing/events/" + raceRef.key);
+      const data = d?.data || {};
+      const runners = (data.runners || []).map(r => {
+        const odds = r.odds || {};
+        const win = num(odds.fixed_win ?? odds.fixedWin ?? odds.win);
+        const place = num(odds.fixed_place ?? odds.fixedPlace ?? odds.place);
+        const flucs = Array.isArray(r.flucs) ? r.flucs.map(num).filter(Boolean) : [];
+        return {
+          number: r.runner_number, name: r.name, barrier: r.barrier,
+          rider: r.jockey || "", trainer: r.trainer_name || "",
+          win, place, open: flucs.length ? flucs[0] : null,
+          scratched: !!r.is_scratched, fav: !!r.favourite, mover: !!r.mover
+        };
+      });
+      return {
+        name: data.race?.description || raceRef.name, start: raceRef.start,
+        distance: data.race?.distance || null, runners
+      };
+    }
+  },
+
+  /* ----- TAB public info-service ----- */
+  TAB: {
+    label: "TAB",
+    base: "https://api.beta.tab.com.au/v1/tab-info-service",
+    jur(){ const j = $("#jur").value; return j === "ALL" ? "NSW" : j; },
+    async meetings(){
+      const d = await corsFetch(this.base + `/racing/dates/${todayISO()}/meetings?jurisdiction=${this.jur()}`);
+      const list = d.meetings || [];
+      return list.map(m => ({
+        name: m.meetingName || "Unknown", location: m.location || "",
+        code: (m.raceType === "R" ? "T" : m.raceType) || "T",
+        key: (m.raceType || "R") + ":" + (m.venueMnemonic || m.meetingName),
+        races: (m.races || []).map(r => ({
+          key: String(r.raceNumber), number: r.raceNumber,
+          name: r.raceName || ("Race " + r.raceNumber),
+          start: r.raceStartTime, status: r.raceStatus || ""
+        }))
+      })).filter(m => m.races.length);
+    },
+    async race(mtg, raceRef){
+      const [type, venue] = mtg.key.split(":");
+      const d = await corsFetch(this.base +
+        `/racing/dates/${todayISO()}/meetings/${type}/${encodeURIComponent(venue)}/races/${raceRef.number}?jurisdiction=${this.jur()}&fixedOdds=true&returnPromo=false`);
+      const runners = (d.runners || []).map(r => {
+        const fo = r.fixedOdds || {};
+        const flucs = fo.flucs || [];
+        return {
+          number: r.runnerNumber, name: r.runnerName || ("Runner " + r.runnerNumber),
+          barrier: r.barrierNumber, rider: r.riderDriverName || "", trainer: r.trainerName || "",
+          win: num(fo.returnWin), place: num(fo.returnPlace),
+          open: num(fo.openingPrice) || (flucs.length ? num(flucs[0].returnWin) : null),
+          scratched: (fo.bettingStatus || "").toLowerCase().includes("scratch"),
+          fav: false, mover: false
+        };
+      });
+      return { name: d.raceName || raceRef.name, start: d.raceStartTime, distance: d.raceDistance, runners };
+    }
+  }
+};
+/* Neds = same Entain platform, different domain */
+SOURCES.NEDS = Object.assign(Object.create(SOURCES.LB), {
+  label: "Neds",
+  base: "https://api-affiliates.neds.com.au/affiliates/v1"
+});
+
+const AUTO_ORDER = ["LB", "NEDS", "TAB"];
+function currentSourceKeys(){
+  const sel = $("#source").value;
+  if(sel !== "AUTO") return [sel];
+  return state.activeSource
+    ? [state.activeSource, ...AUTO_ORDER.filter(s => s !== state.activeSource)]
+    : AUTO_ORDER;
+}
+async function loadMeetings(){
+  let lastErr;
+  for(const key of currentSourceKeys()){
+    try{
+      setStatus("Trying " + SOURCES[key].label + "…");
+      const meetings = await SOURCES[key].meetings();
+      state.activeSource = key;
+      state.meetings = meetings;
+      return;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("no source responded");
+}
+async function loadRace(mtg, raceRef){
+  return SOURCES[state.activeSource].race(mtg, raceRef);
+}
+const raceKey = (mtg, raceRef) => mtg.key + "|" + raceRef.key;
+
+/* ---------- DEMO data ---------- */
+const DEMO_SEED = [
+  { name:"Randwick", location:"NSW", code:"T", key:"D:RAN", races:[
+    { number:5, name:"TAB Highway Hcp 1400m", mins:18, runners:[
+      ["Salty Tycoon","J. McDonald","C. Waller",4.6,1.9,6.0],
+      ["Midnight Drum","T. Berry","B. Baker",3.4,1.55,3.2],
+      ["Hellbent Honey","K. Mc Evoy","G. Ryan",8.5,2.6,12.0],
+      ["Rivergum Flyer","N. Rawiller","J. Pride",6.0,2.1,5.5],
+      ["Sir Pistol","Z. Lloyd","M. Freedman",11.0,3.2,9.0],
+      ["Decadent Miss","J. Collett","K. Lees",17.0,4.4,17.0],
+      ["Bold Manoeuvre","T. Sherry","R. & W. Freedman",26.0,6.0,21.0],
+      ["Apollo Creed","A. Hyeronimus","B. Widdup",41.0,8.5,41.0]
+    ]},
+    { number:6, name:"Bowermans BM78 1200m", mins:53, runners:[
+      ["Front Page News","J. McDonald","C. Waller",2.9,1.4,3.6],
+      ["Tidal Impact","T. Clark","J. Cummings",5.5,1.95,4.8],
+      ["Whiskey Whisper","R. King","M. Smith",7.0,2.3,7.0],
+      ["Grand Insignia","D. Gibbons","K. Lees",9.0,2.8,11.0],
+      ["Lonhro's Gift","T. Berry","G. Portelli",15.0,4.0,13.0],
+      ["Stormy Verdict","B. Shinn","J. O'Shea",21.0,5.0,26.0]
+    ]}
+  ]},
+  { name:"Doomben", location:"QLD", code:"T", key:"D:DOM", races:[
+    { number:4, name:"XXXX Dry Plate 1110m", mins:35, runners:[
+      ["Spirit Of Gaza","J. Orman","T. Gollan",3.1,1.45,4.4],
+      ["Karaka Jack","M. Cahill","R. Heathcote",4.8,1.8,4.2],
+      ["Bring The Ransom","A. Mallyon","K. Schweida",6.5,2.2,6.5],
+      ["Pennies","B. Thornton","S. O'Dea",10.0,3.0,8.0],
+      ["Vodka Soda","C. Bayliss","D. Vandyke",13.0,3.6,16.0],
+      ["Lord Of Doom","J. Byrne","M. Currie",19.0,4.6,19.0]
+    ]}
+  ]},
+  { name:"Sandown", location:"VIC", code:"T", key:"D:SAN", races:[
+    { number:7, name:"Ladbrokes BM70 1600m", mins:71, runners:[
+      ["Russian Dancer","B. Mertens","C. Maher",4.0,1.7,5.0],
+      ["Tavi Time","J. Bowditch","M. Price",5.0,1.9,4.4],
+      ["Sebonack","D. Oliver","A. & S. Freedman",6.0,2.1,7.5],
+      ["Field Of Honour","C. Williams","G. Eurell",8.0,2.5,8.0],
+      ["Zoumon","H. Coffey","L. & T. Corstens",12.0,3.3,10.0],
+      ["Princess Raffles","J. Mott","P. Stokes",16.0,4.2,20.0],
+      ["Hard To Cross","B. Egan","N. Ryan",31.0,7.0,31.0]
+    ]}
+  ]}
+];
+
+function demoBuild(){
+  state.meetings = DEMO_SEED.map(m => ({
+    name:m.name, location:m.location, code:m.code, key:m.key,
+    races: m.races.map(r => ({
+      key:String(r.number), number:r.number, name:r.name,
+      start:new Date(Date.now()+r.mins*60000).toISOString(), status:""
+    }))
+  }));
+  DEMO_SEED.forEach(m => m.races.forEach(r => {
+    const key = m.key + "|" + r.number;
+    let best = Infinity, favIdx = 0;
+    r.runners.forEach((arr,i) => { if(arr[3] < best){ best = arr[3]; favIdx = i; } });
+    state.raceCache[key] = {
+      name:r.name, start:new Date(Date.now()+r.mins*60000).toISOString(),
+      runners: r.runners.map((arr,i) => {
+        const [name,rider,trainer,win,place,open] = arr;
+        recordPrice(key + "|" + (i+1), open, win);
+        return { number:i+1, name, rider, trainer, win, place, open, barrier:i+2,
+                 scratched:false, fav:i===favIdx, mover:false };
+      })
+    };
+  }));
+}
+function demoTick(){
+  Object.entries(state.raceCache).forEach(([key,race]) => {
+    race.runners.forEach(r => {
+      if(r.scratched) return;
+      const roll = Math.random();
+      let f = 1;
+      if(roll < 0.30) f = 1 - (Math.random()*0.07);
+      else if(roll < 0.50) f = 1 + (Math.random()*0.06);
+      r.win = Math.max(1.1, +(r.win * f).toFixed(r.win < 10 ? 1 : 0));
+      r.place = Math.max(1.04, +(r.place * (1 + (f-1)*0.5)).toFixed(2));
+      recordPrice(key + "|" + r.number, r.open, r.win);
+    });
+  });
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const app = $("#app");
+  if(state.view.name === "race") return renderRace(app);
+  renderHome(app);
+}
+
+function topMovers(){
+  const out = [];
+  Object.entries(state.raceCache).forEach(([key, race]) => {
+    const mtgKey = key.slice(0, key.lastIndexOf("|"));
+    const rKey = key.slice(key.lastIndexOf("|") + 1);
+    const mtg = state.meetings.find(m => m.key === mtgKey);
+    const raceRef = mtg?.races.find(r => r.key === rKey);
+    race.runners.forEach(r => {
+      if(r.scratched) return;
+      const m = movement(key + "|" + r.number);
+      if(m.pct > 1) out.push({ ...r, pct:m.pct, mtg, raceRef, cacheKey:key });
+    });
+  });
+  return out.sort((a,b) => b.pct - a.pct).slice(0,8);
+}
+
+function renderHome(app){
+  const movers = topMovers();
+  let html = "";
+
+  html += `<div class="section-label">Market movers — firming</div>`;
+  if(movers.length){
+    html += `<div class="movers">` + movers.map(mv => `
+      <div class="mover-card" data-mtg="${esc(mv.mtg?.key)}" data-race="${esc(mv.raceRef?.key)}">
+        <div class="nm">${esc(mv.name)}</div>
+        <div class="where">${esc(mv.mtg?.name || "")} · R${mv.raceRef?.number ?? "?"}</div>
+        <div class="row">
+          <span class="odds">$${mv.win}</span>
+          ${moveCell(mv.cacheKey + "|" + mv.number)}
+        </div>
+      </div>`).join("") + `</div>`;
+  } else {
+    html += `<div class="empty">No significant firmers yet.<br>Open a race or two so prices are being tracked, then Refresh — the biggest plunges appear here.</div>`;
+  }
+
+  html += `<div class="section-label">Today's meetings${state.mode==="live" && state.activeSource ? " · " + SOURCES[state.activeSource].label : ""}</div>`;
+  const codeF = $("#codeFilter").value;
+  const jurF = $("#jur").value;
+  const meetings = state.meetings.filter(m =>
+    (codeF === "ALL" || m.code === codeF) &&
+    (jurF === "ALL" || (m.location || "").toUpperCase().includes(jurF))
+  );
+  if(!meetings.length){
+    html += `<div class="empty">No meetings match these filters today.<br>Try "All states" / "All" codes, or Refresh.</div>`;
+  }
+  meetings.forEach(m => {
+    const open = state.openMeetings.has(m.key);
+    html += `
+    <div class="meeting ${open ? "open":""}" data-mtg="${esc(m.key)}">
+      <div class="meeting-head">
+        <span class="mtg-type">${esc(m.code)}</span>
+        <div>
+          <div class="mtg-name">${esc(m.name)}</div>
+          <div class="mtg-loc">${esc(m.location)} · ${codeLabel(m.code)}</div>
+        </div>
+        <span class="mtg-count">${m.races.length} races</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="races">${m.races.map(r => {
+        const mins = minsAway(r.start);
+        const t = mins != null && mins > -5
+          ? (mins <= 0 ? "now" : mins < 60 ? mins + "m" : fmtTime(r.start))
+          : fmtTime(r.start);
+        return `<div class="race-row" data-mtg="${esc(m.key)}" data-race="${esc(r.key)}">
+          <span class="race-no">R${r.number}</span>
+          <span class="race-nm">${esc(r.name)}</span>
+          ${r.status && r.status !== "Normal" ? `<span class="race-status">${esc(r.status)}</span>` : ""}
+          <span class="race-time ${mins!=null && mins>=0 && mins<=15 ? "soon":""}">${t}</span>
+        </div>`;
+      }).join("")}</div>
+    </div>`;
+  });
+  app.innerHTML = html;
+}
+
+async function renderRace(app){
+  const { mtgKey, rKey } = state.view;
+  const mtg = state.meetings.find(m => m.key === mtgKey);
+  const raceRef = mtg?.races.find(r => r.key === rKey);
+  if(!mtg || !raceRef){ state.view = {name:"home"}; return render(); }
+  const cacheKey = raceKey(mtg, raceRef);
+  let race = state.raceCache[cacheKey];
+
+  if(!race && state.mode === "live"){
+    app.innerHTML = `<button class="back" id="backBtn">‹ Meetings</button><div class="spinner"></div>`;
+    bindBack();
+    try{
+      race = await loadRace(mtg, raceRef);
+      race.runners.forEach(r => recordPrice(cacheKey + "|" + r.number, r.open, r.win));
+      state.raceCache[cacheKey] = race;
+    }catch(e){
+      app.innerHTML = `<button class="back" id="backBtn">‹ Meetings</button>
+        <div class="empty">Couldn't load this race (${esc(e.message)}).<br>Try Refresh, another source, or check your connection.</div>`;
+      bindBack(); return;
+    }
+  }
+  if(!race){ state.view = {name:"home"}; return render(); }
+
+  const sorted = [...race.runners].sort((a,b) => (a.scratched?1:0)-(b.scratched?1:0) || (a.win??999)-(b.win??999));
+  app.innerHTML = `
+    <button class="back" id="backBtn">‹ Meetings</button>
+    <div class="race-title">${esc(mtg.name)} · R${raceRef.number}</div>
+    <div class="race-sub">${esc(race.name)}${race.distance ? " · " + esc(race.distance) + "m" : ""} · ${fmtTime(race.start)}${(() => { const m = minsAway(race.start); return m!=null && m>=0 ? ` · in ${m}m` : ""; })()}</div>
+    <div class="colhead"><span>#</span><span>Runner</span><span style="text-align:right">Win/Pl</span><span style="text-align:right">Move</span></div>
+    ${sorted.map(r => `
+      <div class="runner ${r.scratched ? "scr":""}">
+        <span class="saddle">${r.number}</span>
+        <div>
+          <div class="r-name">${esc(r.name)}${r.fav ? '<span class="badge fav">Fav</span>' : ""}${r.mover ? '<span class="badge mov">Mover</span>' : ""}</div>
+          <div class="r-meta">${r.barrier ? "B"+r.barrier+" · " : ""}${esc(r.rider)}${r.trainer ? " · " + esc(r.trainer) : ""}</div>
+        </div>
+        <div class="r-odds">${r.scratched ? "SCR" : r.win != null ? "$"+r.win : "–"}
+          ${!r.scratched && r.place != null ? `<span class="pl">$${r.place}</span>` : ""}</div>
+        ${r.scratched ? "<div></div>" : moveCell(cacheKey + "|" + r.number)}
+      </div>`).join("")}
+  `;
+  bindBack();
+}
+function bindBack(){
+  const b = $("#backBtn");
+  if(b) b.onclick = () => { state.view = {name:"home"}; render(); };
+}
+
+/* ---------- refresh ---------- */
+async function refresh(){
+  const btn = $("#refreshBtn");
+  btn.disabled = true; btn.textContent = "Updating…";
+  try{
+    if(state.mode === "live"){
+      if(!state.meetings.length) $("#app").innerHTML = `<div class="spinner"></div>`;
+      await loadMeetings();
+      for(const cacheKey of Object.keys(state.raceCache)){
+        const mtgKey = cacheKey.slice(0, cacheKey.lastIndexOf("|"));
+        const rKey = cacheKey.slice(cacheKey.lastIndexOf("|") + 1);
+        const mtg = state.meetings.find(m => m.key === mtgKey);
+        const raceRef = mtg?.races.find(r => r.key === rKey);
+        if(!mtg || !raceRef){ delete state.raceCache[cacheKey]; continue; }
+        try{
+          const race = await loadRace(mtg, raceRef);
+          race.runners.forEach(r => recordPrice(cacheKey + "|" + r.number, r.open, r.win));
+          state.raceCache[cacheKey] = race;
+        }catch(e){ /* keep stale copy */ }
+      }
+      setStatus("Live via " + SOURCES[state.activeSource].label + " · " +
+        new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",second:"2-digit"}));
+    } else {
+      if(!state.meetings.length) demoBuild(); else demoTick();
+      setStatus("Demo · simulated tick " + new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",second:"2-digit"}));
+    }
+    render();
+  }catch(e){
+    setStatus("Live fetch failed — " + e.message);
+    if(state.mode === "live" && !state.meetings.length){
+      $("#app").innerHTML = `<div class="empty">Couldn't reach any odds source from here.<br>
+        (${esc(e.message)})<br><br>
+        This is the browser's cross-site (CORS) rule plus flaky public relays — not a fault in the app.<br>
+        The fix is a free private relay (Cloudflare Worker), or try again later / from GitHub Pages.<br><br>
+        <b>Use demo</b> still works fully in the meantime.</div>`;
+    }
+  }finally{
+    btn.disabled = false; btn.textContent = "Refresh";
+  }
+}
+function setStatus(s){ $("#status").textContent = s; }
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const head = e.target.closest(".meeting-head");
+  if(head){
+    const k = head.parentElement.dataset.mtg;
+    state.openMeetings.has(k) ? state.openMeetings.delete(k) : state.openMeetings.add(k);
+    head.parentElement.classList.toggle("open");
+    return;
+  }
+  const row = e.target.closest(".race-row, .mover-card");
+  if(row && row.dataset.race != null){
+    state.view = { name:"race", mtgKey: row.dataset.mtg, rKey: row.dataset.race };
+    render();
+  }
+});
+$("#refreshBtn").addEventListener("click", refresh);
+$("#autoBtn").addEventListener("click", () => {
+  const on = $("#autoBtn").dataset.on === "true";
+  $("#autoBtn").dataset.on = String(!on);
+  if(state.autoTimer) clearInterval(state.autoTimer);
+  state.autoTimer = !on ? setInterval(refresh, 60000) : null;
+});
+$("#modeBtn").addEventListener("click", () => {
+  state.mode = state.mode === "demo" ? "live" : "demo";
+  $("#modePill").dataset.mode = state.mode;
+  $("#modePill").textContent = state.mode === "live" ? "Live" : "Demo";
+  $("#modeBtn").textContent = state.mode === "live" ? "Use demo" : "Go live";
+  state.meetings = []; state.raceCache = {}; state.book = {}; state.activeSource = null;
+  state.view = { name:"home" };
+  refresh();
+});
+$("#source").addEventListener("change", () => {
+  state.activeSource = null;
+  if(state.mode === "live"){ state.meetings = []; state.raceCache = {}; state.book = {}; refresh(); }
+});
+$("#jur").addEventListener("change", () => {
+  if(state.mode === "live" && state.activeSource === "TAB"){
+    state.meetings = []; state.raceCache = {}; state.book = {}; refresh();
+  } else render();
+});
+$("#codeFilter").addEventListener("change", render);
+
+/* ---------- boot ---------- */
+$("#dateStamp").textContent = new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+demoBuild();
+render();
+setStatus("Demo mode — tap Refresh to simulate movement, or Go live for real prices");
+</script>
+</body>
+</html>
