@@ -115,6 +115,14 @@ button:active{transform:scale(.97)}
 }
 .race-row:last-child{border-bottom:none}
 .race-row:active{background:var(--panel-2)}
+.race-row.dead{opacity:.45}
+.stat{
+  font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  border-radius:5px;padding:2px 6px;flex-shrink:0;
+  background:var(--panel-2);color:var(--dim);border:1px solid var(--line);
+}
+.stat.dead{background:rgba(226,59,59,.1);color:var(--ease);border-color:rgba(226,59,59,.35)}
+.stat.done{background:rgba(22,163,74,.1);color:var(--firm);border-color:rgba(22,163,74,.3)}
 .race-no{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--amber);font-size:12.5px;width:30px;flex-shrink:0}
 .race-nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .race-time{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);flex-shrink:0}
@@ -278,6 +286,17 @@ const minsAway = iso => { const d = new Date(iso); return isNaN(d) ? null : Math
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const codeLabel = c => ({T:"Horses",R:"Horses",H:"Harness",G:"Greys"}[c] || c);
 const num = v => { const n = parseFloat(v); return isFinite(n) && n > 1 ? n : null; };
+/* classify a race status string from any source */
+function statusInfo(s){
+  const t = String(s || "").toLowerCase();
+  if(!t || t === "normal" || t === "open" || t === "selling") return { label:"", kind:"" };
+  if(/aband|abnd|cancel/.test(t))            return { label:"ABND",  kind:"dead" };
+  if(/final|paid|paying/.test(t))            return { label:"FINAL", kind:"done" };
+  if(/interim/.test(t))                      return { label:"INT",   kind:"done" };
+  if(/closed/.test(t))                       return { label:"CLSD",  kind:"done" };
+  if(/suspend/.test(t))                      return { label:"SUSP",  kind:"dead" };
+  return { label: String(s).slice(0,6).toUpperCase(), kind:"" };
+}
 
 /* ---------- movement maths ---------- */
 function recordPrice(key, open, cur){
@@ -394,6 +413,7 @@ const SOURCES = {
       return {
         name: data.race?.description || raceRef.name, start: raceRef.start,
         distance: data.race?.distance || null,
+        status: data.race?.status || "",
         silks: data.race?.silk_url || data.race?.silkUrl || "",
         runners
       };
@@ -436,7 +456,7 @@ const SOURCES = {
           fav: false, mover: false
         };
       });
-      return { name: d.raceName || raceRef.name, start: d.raceStartTime, distance: d.raceDistance, silks: "", runners };
+      return { name: d.raceName || raceRef.name, start: d.raceStartTime, distance: d.raceDistance, status: d.raceStatus || "", silks: "", runners };
     }
   }
 };
@@ -566,6 +586,7 @@ function render(){
 function topMovers(){
   const out = [];
   Object.entries(state.raceCache).forEach(([key, race]) => {
+    if(statusInfo(race.status).kind) return;   // skip abandoned/closed/finished markets
     const mtgKey = key.slice(0, key.lastIndexOf("|"));
     const rKey = key.slice(key.lastIndexOf("|") + 1);
     const mtg = state.meetings.find(m => m.key === mtgKey);
@@ -622,15 +643,17 @@ function renderHome(app){
         <svg class="chev" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="races">${m.races.map(r => {
+        const cached = state.raceCache[m.key + "|" + r.key];
+        const st = statusInfo((cached && cached.status) || r.status);
         const mins = minsAway(r.start);
         const t = mins != null && mins > -5
           ? (mins <= 0 ? "now" : mins < 60 ? mins + "m" : fmtTime(r.start))
           : fmtTime(r.start);
-        return `<div class="race-row" data-mtg="${esc(m.key)}" data-race="${esc(r.key)}">
+        return `<div class="race-row ${st.kind === "dead" ? "dead" : ""}" data-mtg="${esc(m.key)}" data-race="${esc(r.key)}">
           <span class="race-no">R${r.number}</span>
           <span class="race-nm">${esc(r.name)}</span>
-          ${r.status && r.status !== "Normal" ? `<span class="race-status">${esc(r.status)}</span>` : ""}
-          <span class="race-time ${mins!=null && mins>=0 && mins<=15 ? "soon":""}">${t}</span>
+          ${st.label ? `<span class="stat ${st.kind}">${st.label}</span>` : ""}
+          <span class="race-time ${mins!=null && mins>=0 && mins<=15 && st.kind!=="dead" ? "soon":""}">${st.kind === "dead" ? "–" : t}</span>
         </div>`;
       }).join("")}</div>
     </div>`;
@@ -661,6 +684,7 @@ async function renderRace(app){
   }
   if(!race){ state.view = {name:"home"}; return render(); }
 
+  const st = statusInfo(race.status);
   const sorted = [...race.runners].sort((a,b) => (a.scratched?1:0)-(b.scratched?1:0) || (a.win??999)-(b.win??999));
   const maxNo = Math.max(1, ...race.runners.map(r => r.number || 1));
   const silkCell = r => {
@@ -672,8 +696,10 @@ async function renderRace(app){
   };
   app.innerHTML = `
     <button class="back" id="backBtn">‹ Meetings</button>
-    <div class="race-title">${esc(mtg.name)} · R${raceRef.number}</div>
-    <div class="race-sub">${esc(race.name)}${race.distance ? " · " + esc(race.distance) + "m" : ""} · ${fmtTime(race.start)}${(() => { const m = minsAway(race.start); return m!=null && m>=0 ? ` · in ${m}m` : ""; })()}</div>
+    <div class="race-title">${esc(mtg.name)} · R${raceRef.number} ${st.label ? `<span class="stat ${st.kind}" style="vertical-align:3px">${st.label}</span>` : ""}</div>
+    <div class="race-sub">${esc(race.name)}${race.distance ? " · " + esc(race.distance) + "m" : ""} · ${fmtTime(race.start)}${(() => { const m = minsAway(race.start); return m!=null && m>=0 && st.kind!=="dead" ? ` · in ${m}m` : ""; })()}</div>
+    ${st.kind === "dead" ? `<div class="empty" style="padding:14px 12px">Racing abandoned — betting is suspended and prices are frozen, so no market movement will show for this race.</div>` : ""}
+    ${st.kind === "done" ? `<div class="empty" style="padding:14px 12px">This race has been run — the market is closed.</div>` : ""}
     <div class="colhead"><span></span><span>Runner</span><span style="text-align:right">Fixed W/P</span><span style="text-align:right">Move</span></div>
     ${sorted.map(r => `
       <div class="runner ${r.scratched ? "scr":""}">
