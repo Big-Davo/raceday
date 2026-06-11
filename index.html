@@ -4,23 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0c120e">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f4f5f6">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
 <title>RaceDay — Odds &amp; Movers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0c120e;            /* tote-board green-black */
-  --panel:#141d17;
-  --panel-2:#1a2620;
-  --line:rgba(255,255,255,.07);
-  --text:#e9ede9;
-  --dim:#8da396;
-  --amber:#ffc44d;         /* tote-bulb odds */
-  --firm:#2ecc71;
-  --ease:#ff5d5d;
-  --accent:#39b06f;
+  --bg:#f4f5f6;            /* light grey page */
+  --panel:#ffffff;
+  --panel-2:#eef1f3;
+  --line:#e2e6e9;
+  --text:#19232b;
+  --dim:#67737d;
+  --amber:#0a8a4f;         /* odds: bookmaker green */
+  --firm:#16a34a;
+  --ease:#e23b3b;
+  --accent:#00a651;
   --radius:12px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -36,7 +38,7 @@ body{
 /* ---------- header ---------- */
 header{
   position:sticky;top:0;z-index:20;
-  background:linear-gradient(var(--bg) 82%,rgba(12,18,14,0));
+  background:linear-gradient(var(--bg) 82%,rgba(244,245,246,0));
   padding:10px 0 14px;
 }
 .masthead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
@@ -54,7 +56,7 @@ select,button{
 }
 button{cursor:pointer}
 button:active{transform:scale(.97)}
-#refreshBtn{background:var(--accent);border-color:transparent;color:#06130b;flex:1;min-width:88px}
+#refreshBtn{background:var(--accent);border-color:transparent;color:#fff;flex:1;min-width:88px}
 #refreshBtn:disabled{opacity:.55}
 #autoBtn[data-on="true"]{border-color:var(--accent);color:var(--accent)}
 .modebar{
@@ -65,9 +67,11 @@ button:active{transform:scale(.97)}
   border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-weight:600;
   letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;
 }
-.modepill[data-mode="live"]{color:var(--firm);border-color:rgba(46,204,113,.4)}
-.modepill[data-mode="demo"]{color:var(--amber);border-color:rgba(255,196,77,.4)}
+.modepill[data-mode="live"]{color:var(--firm);border-color:rgba(22,163,74,.45)}
+.modepill[data-mode="demo"]{color:#b45309;border-color:rgba(180,83,9,.4)}
 #status{flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status.flash{animation:statusflash .9s ease-out}
+@keyframes statusflash{0%{color:var(--firm)}100%{color:var(--dim)}}
 
 /* ---------- movers strip ---------- */
 .section-label{
@@ -139,14 +143,18 @@ button:active{transform:scale(.97)}
   background:var(--panel-2);border:1px solid var(--line);border-radius:7px;
   width:30px;height:30px;display:flex;align-items:center;justify-content:center;
 }
+.silk{
+  width:30px;height:30px;border-radius:6px;border:1px solid var(--line);
+  background-color:var(--panel-2);background-repeat:no-repeat;
+}
 .r-name{font-size:14.5px;font-weight:600;line-height:1.25}
 .r-meta{font-size:10.5px;color:var(--dim);margin-top:2px}
 .badge{
   display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:1px;
 }
-.badge.fav{background:rgba(255,196,77,.15);color:var(--amber);border:1px solid rgba(255,196,77,.35)}
-.badge.mov{background:rgba(46,204,113,.15);color:var(--firm);border:1px solid rgba(46,204,113,.35)}
+.badge.fav{background:rgba(255,196,77,.25);color:#9a6a00;border:1px solid rgba(180,130,20,.45)}
+.badge.mov{background:rgba(22,163,74,.12);color:var(--firm);border:1px solid rgba(22,163,74,.35)}
 .r-odds{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;color:var(--amber);text-align:right}
 .r-odds .pl{display:block;font-size:10px;color:var(--dim);font-weight:500}
 /* signature: the money column */
@@ -161,8 +169,8 @@ button:active{transform:scale(.97)}
   transition:background .4s,box-shadow .4s;
 }
 .heat .arr{font-weight:700;font-style:normal;line-height:1}
-.heat.firm .arr{color:#04150b}
-.heat.ease .arr{color:#1c0606}
+.heat.firm .arr{color:#fff}
+.heat.ease .arr{color:#fff}
 .heat.flat .arr{color:var(--dim)}
 
 .empty{padding:28px 12px;text-align:center;color:var(--dim);font-size:13.5px;line-height:1.6}
@@ -290,13 +298,13 @@ function heatStyle(pct){
   const mag = Math.min(Math.abs(pct) / 30, 1);
   if(pct > 0.05){
     const a = 0.18 + mag * 0.82;
-    return `background:rgba(46,204,113,${a.toFixed(2)});border-color:rgba(46,204,113,${(0.3+mag*0.7).toFixed(2)});`
-         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(46,204,113,.45);` : "");
+    return `background:rgba(22,163,74,${a.toFixed(2)});border-color:rgba(22,163,74,${(0.3+mag*0.7).toFixed(2)});`
+         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(22,163,74,.45);` : "");
   }
   if(pct < -0.05){
     const a = 0.18 + mag * 0.82;
-    return `background:rgba(255,93,93,${a.toFixed(2)});border-color:rgba(255,93,93,${(0.3+mag*0.7).toFixed(2)});`
-         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(255,93,93,.4);` : "");
+    return `background:rgba(226,59,59,${a.toFixed(2)});border-color:rgba(226,59,59,${(0.3+mag*0.7).toFixed(2)});`
+         + (mag > .5 ? `box-shadow:0 0 ${Math.round(mag*14)}px rgba(226,59,59,.4);` : "");
   }
   return "";
 }
@@ -373,16 +381,21 @@ const SOURCES = {
         const win = num(odds.fixed_win ?? odds.fixedWin ?? odds.win);
         const place = num(odds.fixed_place ?? odds.fixedPlace ?? odds.place);
         const flucs = Array.isArray(r.flucs) ? r.flucs.map(num).filter(Boolean) : [];
+        const wAlloc = r.weight && (r.weight.allocated || r.weight.total);
+        const weight = wAlloc ? String(wAlloc).replace(/kg/i,"").trim() : "";
         return {
           number: r.runner_number, name: r.name, barrier: r.barrier,
           rider: r.jockey || "", trainer: r.trainer_name || "",
+          weight: weight ? weight + "kg" : "",
           win, place, open: flucs.length ? flucs[0] : null,
           scratched: !!r.is_scratched, fav: !!r.favourite, mover: !!r.mover
         };
       });
       return {
         name: data.race?.description || raceRef.name, start: raceRef.start,
-        distance: data.race?.distance || null, runners
+        distance: data.race?.distance || null,
+        silks: data.race?.silk_url || data.race?.silkUrl || "",
+        runners
       };
     }
   },
@@ -416,13 +429,14 @@ const SOURCES = {
         return {
           number: r.runnerNumber, name: r.runnerName || ("Runner " + r.runnerNumber),
           barrier: r.barrierNumber, rider: r.riderDriverName || "", trainer: r.trainerName || "",
+          weight: r.handicapWeight ? r.handicapWeight + "kg" : "",
           win: num(fo.returnWin), place: num(fo.returnPlace),
           open: num(fo.openingPrice) || (flucs.length ? num(flucs[0].returnWin) : null),
           scratched: (fo.bettingStatus || "").toLowerCase().includes("scratch"),
           fav: false, mover: false
         };
       });
-      return { name: d.raceName || raceRef.name, start: d.raceStartTime, distance: d.raceDistance, runners };
+      return { name: d.raceName || raceRef.name, start: d.raceStartTime, distance: d.raceDistance, silks: "", runners };
     }
   }
 };
@@ -520,7 +534,8 @@ function demoBuild(){
       runners: r.runners.map((arr,i) => {
         const [name,rider,trainer,win,place,open] = arr;
         recordPrice(key + "|" + (i+1), open, win);
-        return { number:i+1, name, rider, trainer, win, place, open, barrier:i+2,
+        return { number:i+1, name, rider, trainer, weight:(59 - i*0.5).toFixed(1)+"kg",
+                 win, place, open, barrier:i+2,
                  scratched:false, fav:i===favIdx, mover:false };
       })
     };
@@ -647,17 +662,25 @@ async function renderRace(app){
   if(!race){ state.view = {name:"home"}; return render(); }
 
   const sorted = [...race.runners].sort((a,b) => (a.scratched?1:0)-(b.scratched?1:0) || (a.win??999)-(b.win??999));
+  const maxNo = Math.max(1, ...race.runners.map(r => r.number || 1));
+  const silkCell = r => {
+    if(race.silks && r.number){
+      const pos = maxNo > 1 ? ((r.number - 1) / (maxNo - 1)) * 100 : 0;
+      return `<span class="silk" style="background-image:url('${esc(race.silks)}');background-size:${maxNo * 100}% 100%;background-position:${pos}% 0"></span>`;
+    }
+    return `<span class="saddle">${r.number}</span>`;
+  };
   app.innerHTML = `
     <button class="back" id="backBtn">‹ Meetings</button>
     <div class="race-title">${esc(mtg.name)} · R${raceRef.number}</div>
     <div class="race-sub">${esc(race.name)}${race.distance ? " · " + esc(race.distance) + "m" : ""} · ${fmtTime(race.start)}${(() => { const m = minsAway(race.start); return m!=null && m>=0 ? ` · in ${m}m` : ""; })()}</div>
-    <div class="colhead"><span>#</span><span>Runner</span><span style="text-align:right">Win/Pl</span><span style="text-align:right">Move</span></div>
+    <div class="colhead"><span></span><span>Runner</span><span style="text-align:right">Fixed W/P</span><span style="text-align:right">Move</span></div>
     ${sorted.map(r => `
       <div class="runner ${r.scratched ? "scr":""}">
-        <span class="saddle">${r.number}</span>
+        ${silkCell(r)}
         <div>
-          <div class="r-name">${esc(r.name)}${r.fav ? '<span class="badge fav">Fav</span>' : ""}${r.mover ? '<span class="badge mov">Mover</span>' : ""}</div>
-          <div class="r-meta">${r.barrier ? "B"+r.barrier+" · " : ""}${esc(r.rider)}${r.trainer ? " · " + esc(r.trainer) : ""}</div>
+          <div class="r-name">${r.number}. ${esc(r.name)}${r.barrier ? " (" + r.barrier + ")" : ""}${r.fav ? '<span class="badge fav">Fav</span>' : ""}${r.mover ? '<span class="badge mov">Mover</span>' : ""}</div>
+          <div class="r-meta">J ${esc(r.rider) || "–"}${r.weight ? " " + esc(r.weight) : ""}${r.trainer ? " · T " + esc(r.trainer) : ""}</div>
         </div>
         <div class="r-odds">${r.scratched ? "SCR" : r.win != null ? "$"+r.win : "–"}
           ${!r.scratched && r.place != null ? `<span class="pl">$${r.place}</span>` : ""}</div>
@@ -674,6 +697,7 @@ function bindBack(){
 /* ---------- refresh ---------- */
 async function refresh(){
   const btn = $("#refreshBtn");
+  const t0 = Date.now();
   btn.disabled = true; btn.textContent = "Updating…";
   try{
     if(state.mode === "live"){
@@ -708,10 +732,17 @@ async function refresh(){
         <b>Use demo</b> still works fully in the meantime.</div>`;
     }
   }finally{
-    btn.disabled = false; btn.textContent = "Refresh";
+    const wait = Math.max(0, 900 - (Date.now() - t0));
+    setTimeout(() => { btn.disabled = false; btn.textContent = "Refresh"; }, wait);
   }
 }
-function setStatus(s){ $("#status").textContent = s; }
+function setStatus(s){
+  const el = $("#status");
+  el.textContent = s;
+  el.classList.remove("flash");
+  void el.offsetWidth;        // restart the animation
+  el.classList.add("flash");
+}
 
 /* ---------- events ---------- */
 document.addEventListener("click", e => {
