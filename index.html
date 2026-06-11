@@ -346,17 +346,20 @@ async function fetchWithTimeout(url, ms){
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try{
-    return await fetch(url, { signal: ctrl.signal });
+    return await fetch(url, { signal: ctrl.signal, cache: "no-store" });
   } finally {
     clearTimeout(t);
   }
 }
 async function corsFetch(url){
+  // cache-bust so proxies and browsers can't serve stale prices/statuses
+  // (both feeds ignore unknown query parameters)
+  const busted = url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now();
   const order = [...PROXIES.keys()].sort((a,b)=>(a===state.workingProxy?-1:b===state.workingProxy?1:0));
   let lastErr;
   for(const i of order){
     try{
-      const res = await fetchWithTimeout(PROXIES[i](url), ROUTE_TIMEOUT_MS);
+      const res = await fetchWithTimeout(PROXIES[i](busted), ROUTE_TIMEOUT_MS);
       if(!res.ok) throw new Error("HTTP " + res.status);
       const text = await res.text();
       const trimmed = text.trim();
@@ -747,6 +750,7 @@ async function refresh(){
       }
       setStatus("Live via " + SOURCES[state.activeSource].label + " · " +
         new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",second:"2-digit"}));
+      state.lastUpdatedTs = Date.now();
     } else {
       if(!state.meetings.length) demoBuild(); else demoTick();
       setStatus("Demo · simulated tick " + new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit",second:"2-digit"}));
@@ -815,6 +819,25 @@ $("#jur").addEventListener("change", () => {
   } else render();
 });
 $("#codeFilter").addEventListener("change", render);
+
+/* when the iPhone un-suspends the app (return from background / unlock),
+   the page is frozen at its last state — refresh if the data is stale */
+let refreshing = false;
+const origRefresh = refresh;
+refresh = async function(){
+  if(refreshing) return;
+  refreshing = true;
+  try { await origRefresh(); } finally { refreshing = false; }
+};
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && state.mode === "live"){
+    const stale = !state.lastUpdatedTs || (Date.now() - state.lastUpdatedTs) > 45000;
+    if(stale) refresh();
+  }
+});
+window.addEventListener("pageshow", e => {
+  if(e.persisted && state.mode === "live") refresh();
+});
 
 /* ---------- boot ---------- */
 $("#dateStamp").textContent = new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
